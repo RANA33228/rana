@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>File Converter</title>
+  <style>
+    /* ... (existing CSS styles) ... */
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      background-color: #252839;
+      
+    }
+
+    #container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    #convertBtn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #convertBtn:hover{
+      background-color: #ff0084;
+    }
+
+    #fileUploadContainer {
+      background-color: #f7f7f7;
+      border: 2px dashed #ccc;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    #fileUploadLabel {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 4px;
+      background-color: #007bff;
+      color: white;
+    }
+
+    #drawingCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* Add this to your existing CSS */
+    .download-button-pdf {
+      background-color: #65ec69;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      margin: 4px;
+      border-radius: 4px;
+      text-decoration: none;
+    }
+
+    .download-button-pdf span {
+      margin-right: 6px;
+      font-weight: bold;
+    }
+    #convertImageBtn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+   
+  #imageUploadContainer{
+    background-color: #f7f7f7;
+      border: 2px dashed #ccc;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+  }  
+  #fileUploadLabel {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 4px;
+      background-color: #007bff;
+      color: white;
+    }
+    #convertImageBtn:hover{
+      background-color: #ff0084;
+    }
+    p{
+      color: #fff;
+      font-size: x-large;
+      font-size: 3vw;
+      -webkit-text-stroke: 0.3vw #383d52 ;
+      text-transform: uppercase;
+    }
+    p::before{
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 10%;
+      color: #01fe87;
+      -webkit-text-stroke: 0vw #383d52;
+      border-right: 2px solid #01fe87;
+      overflow: hidden;
+      animation: animate 6s linear infinite;
+    }
+    @keyframes animate{
+      0%,10%,100%{
+        width: 0;
+      }
+      70%,90%{
+        width: 18%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <P data-text="Welcome...."></P>
+  <div id="container">
+    <h1>File Converter</h1>
+    
+    <!-- PDF to Image section -->
+    <div>
+      <h2>Convert PDF to Image</h2>
+      <div id="fileUploadContainer">
+        <input type="file" id="inputPDF" accept="application/pdf" style="display: none;">
+        <label class="file-upload-label" for="inputPDF" id="fileUploadLabel">Drag and Drop or Click to Upload PDF</label>
+      </div>
+      <br>
+      <button id="convertBtn">Convert to Image</button>
+      <br>
+      <div id="canvasWrapper">
+        <canvas id="pdfCanvas"></canvas>
+        <canvas id="drawingCanvas"></canvas>
+      </div>
+      <div id="downloadLinks"></div>
+    </div>
+    
+    <!-- Image to PNG section -->
+    <div>
+      <h2>Convert Image to PNG</h2>
+      <div id="imageUploadContainer">
+        <input type="file" id="inputImage" accept="image/*" style="display: none;">
+        <label class="file-upload-label" for="inputImage" id="imageUploadLabel">Drag and Drop or Click to Upload Image</label>
+      </div>
+      <br>
+      <button id="convertImageBtn" class="convert-button">Convert to PNG</button>
+      <br>
+      <div id="imageCanvasWrapper">
+        <canvas id="imageCanvas"></canvas>
+        <canvas id="drawingCanvas"></canvas>
+      </div>
+      <div id="imageDownloadLinks"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // PDF to Image section
+      const inputPDF = document.getElementById('inputPDF');
+      const convertBtn = document.getElementById('convertBtn');
+      const pdfCanvas = document.getElementById('pdfCanvas');
+      const drawingCanvas = document.getElementById('drawingCanvas');
+      const downloadLinksContainer = document.getElementById('downloadLinks');
+      const canvasWrapper = document.getElementById('canvasWrapper');
+
+      const drawingCtx = drawingCanvas.getContext('2d');
+      let isDrawing = false;
+      let lastX = 0;
+      let lastY = 0;
+
+      drawingCanvas.addEventListener('mousedown', startDrawing);
+      drawingCanvas.addEventListener('mousemove', draw);
+      drawingCanvas.addEventListener('mouseup', stopDrawing);
+      drawingCanvas.addEventListener('mouseout', stopDrawing);
+
+      function startDrawing(e) {
+        isDrawing = true;
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        drawingCtx.beginPath();
+        drawingCtx.moveTo(lastX, lastY);
+        drawingCtx.lineTo(e.offsetX, e.offsetY);
+        drawingCtx.stroke();
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+      }
+
+      function stopDrawing() {
+        isDrawing = false;
+      }
+
+      convertBtn.addEventListener('click', async function() {
+        const file = inputPDF.files[0];
+        if (file) {
+          const pdfData = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+          downloadLinksContainer.innerHTML = '';
+
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1 });
+
+            pdfCanvas.width = viewport.width;
+            pdfCanvas.height = viewport.height;
+
+            const pdfRenderContext = {
+              canvasContext: pdfCanvas.getContext('2d'),
+              viewport: viewport
+            };
+            await page.render(pdfRenderContext).promise;
+
+            const imageDataURL = pdfCanvas.toDataURL('image/png');
+            const downloadLink = document.createElement('a');
+            downloadLink.href = imageDataURL;
+            downloadLink.download = `page_${pageNum}.png`;
+
+            const downloadButton = document.createElement('button');
+            downloadButton.className = 'download-button download-button-pdf';
+            downloadButton.textContent = `Download Page ${pageNum}`;
+            downloadButton.onclick = () => {
+              downloadLink.click();
+            };
+
+            downloadLinksContainer.appendChild(downloadButton);
+          }
+        }
+      });
+
+      inputPDF.addEventListener('change', function() {
+        canvasWrapper.style.display = 'block';
+        drawingCanvas.width = pdfCanvas.width;
+        drawingCanvas.height = pdfCanvas.height;
+        drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+      });
+
+      // Image to PNG section
+      const inputImage = document.getElementById('inputImage');
+      const convertImageBtn = document.getElementById('convertImageBtn');
+      const imageCanvas = document.getElementById('imageCanvas');
+      const imageCanvasWrapper = document.getElementById('imageCanvasWrapper');
+      const imageDownloadLinksContainer = document.getElementById('imageDownloadLinks');
+
+      convertImageBtn.addEventListener('click', async function() {
+        const imageFile = inputImage.files[0];
+        if (imageFile) {
+          const image = new Image();
+          image.src = URL.createObjectURL(imageFile);
+          image.onload = function() {
+            imageCanvas.width = image.width;
+            imageCanvas.height = image.height;
+            const imageCtx = imageCanvas.getContext('2d');
+            imageCtx.drawImage(image, 0, 0);
+
+            const imageDataURL = imageCanvas.toDataURL('image/png');
+            const downloadLink = document.createElement('a');
+            downloadLink.href = imageDataURL;
+            downloadLink.download = `converted_image.png`;
+
+            const downloadButton = document.createElement('button');
+            downloadButton.className = 'download-button'; // Apply the class here
+            downloadButton.textContent = `Download Converted Image`;
+            downloadButton.onclick = () => {
+              downloadLink.click();
+            };
+
+            imageDownloadLinksContainer.innerHTML = '';
+            imageDownloadLinksContainer.appendChild(downloadButton);
+          };
+        }
+      });
+
+      inputImage.addEventListener('change', function() {
+        imageCanvasWrapper.style.display = 'block';
+      });
+    });
+  </script>
+</body>
+</html>
